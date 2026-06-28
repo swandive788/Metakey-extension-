@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "MetaKey",
+  "version": "0.1.0",
+  "description": "Password manager powered by your MetaNet identity key",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:3321/*",
+    "http://localhost:2121/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MetaKey"
+  }
+}

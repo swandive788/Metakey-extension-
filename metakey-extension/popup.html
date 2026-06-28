@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaKey</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 300px;
+      background: #0d0d1a;
+      color: #e0e0ff;
+      font-family: 'Courier New', monospace;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #1e1e3f;
+    }
+    .logo { font-size: 22px; }
+    .title { font-size: 18px; font-weight: bold; letter-spacing: 2px; color: #7b7bff; }
+    .subtitle { font-size: 10px; color: #555588; letter-spacing: 1px; margin-top: 2px; }
+    .card {
+      background: #11112a;
+      border: 1px solid #1e1e3f;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .card-label {
+      font-size: 10px;
+      color: #555588;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .status-row { display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #333366; flex-shrink: 0; }
+    .dot.connected { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+    .dot.disconnected { background: #ff4466; box-shadow: 0 0 6px #ff4466; }
+    .dot.checking { background: #ffaa00; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .status-text { font-size: 12px; color: #aaaacc; }
+    .domain-text { font-size: 12px; color: #7b7bff; word-break: break-all; }
+    .email-row { display: flex; gap: 8px; align-items: center; }
+    .email-input {
+      flex: 1;
+      background: #0d0d1a;
+      border: 1px solid #2a2a6e;
+      border-radius: 4px;
+      color: #e0e0ff;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 6px 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .email-input:focus { border-color: #4a4aff; }
+    .email-input::placeholder { color: #333366; }
+    .save-btn {
+      padding: 6px 10px;
+      background: #1a1a5e;
+      border: 1px solid #4a4aff;
+      border-radius: 4px;
+      color: #7b7bff;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .save-btn:hover { background: #2a2a7e; }
+    .saved-badge { font-size: 10px; color: #00ff88; margin-top: 6px; display: none; }
+    .password-display {
+      font-size: 12px;
+      color: #00ff88;
+      word-break: break-all;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      min-height: 18px;
+    }
+    .password-row { display: flex; gap: 8px; align-items: flex-start; }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      background: #2a2a6e;
+      border: 1px solid #4a4aff;
+      border-radius: 6px;
+      color: #e0e0ff;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+    .btn:hover { background: #3a3a8e; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.primary { background: #1a1a5e; border-color: #4a4aff; color: #7b7bff; }
+    .footer {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #1e1e3f;
+      font-size: 10px;
+      color: #333366;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">🔑</div>
+    <div>
+      <div class="title">METAKEY</div>
+      <div class="subtitle">IDENTITY-POWERED PASSWORDS</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Wallet Status</div>
+    <div class="status-row">
+      <div class="dot checking" id="statusDot"></div>
+      <div class="status-text" id="statusText">Checking...</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Current Site</div>
+    <div class="domain-text" id="domainText">—</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Your Email for This Site</div>
+    <div class="email-row">
+      <input class="email-input" id="emailInput" type="email" placeholder="you@example.com" />
+      <button class="save-btn" id="saveEmailBtn">Save</button>
+    </div>
+    <div class="saved-badge" id="savedBadge">✓ Saved</div>
+  </div>
+
+  <div class="card" id="passwordCard" style="display:none;">
+    <div class="card-label">Generated Password</div>
+    <div class="password-row">
+      <div class="password-display" id="passwordDisplay"></div>
+      <button class="save-btn" id="copyBtn">Copy</button>
+    </div>
+  </div>
+
+  <button class="btn primary" id="fillBtn" disabled>Fill Credentials</button>
+  <button class="btn" id="showPassBtn" disabled>Show Password</button>
+  <button class="btn" id="pingBtn">Test Wallet Connection</button>
+
+  <div class="footer">METAKEY v0.1 · SWANDIVE SOLUTIONS</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

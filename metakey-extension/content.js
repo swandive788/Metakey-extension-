@@ -1,9 +1,37 @@
 // MetaKey - Content Script
-// Detects login forms, handles both single-step and 2-step flows
+// Detects login forms, handles 2-step flows, bridges window.CWI to background
 
 (function () {
-  let state = 'idle'; // idle | email_filled | waiting_for_password
+  let state = 'idle';
   let pendingCredentials = null;
+
+  // ── CWI Bridge ──────────────────────────────────────────────────────────────
+  // Background worker can't access window.CWI — content script relays it
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'CWI_REQUEST') {
+      if (!window.CWI) {
+        sendResponse({ error: 'CWI not available' });
+        return true;
+      }
+      const { method, args } = message;
+      window.CWI[method](...args)
+        .then(result => sendResponse({ result }))
+        .catch(err => sendResponse({ error: err.message }));
+      return true; // async
+    }
+
+    if (message.type === 'FILL_CREDENTIALS') {
+      fillCredentials(message.credentials);
+    }
+  });
+
+  // Notify background if CWI is available on this page
+  if (window.CWI) {
+    chrome.runtime.sendMessage({ type: 'CWI_AVAILABLE' });
+  }
+
+  // ── Form Detection & Fill ────────────────────────────────────────────────────
 
   function findEmailField() {
     return document.querySelector(
@@ -17,7 +45,6 @@
   }
 
   function findSubmitButton() {
-    // Look for continue/next/submit buttons near the form
     const candidates = [
       ...document.querySelectorAll('button[type="submit"]'),
       ...document.querySelectorAll('button'),
@@ -61,17 +88,14 @@
     const passwordField = findPasswordField();
 
     if (emailField && passwordField) {
-      // Single-step form — fill both immediately
       fillField(emailField, credentials.username);
       fillField(passwordField, credentials.password);
       showToast('🔑 MetaKey: credentials filled');
       state = 'idle';
     } else if (emailField && !passwordField) {
-      // 2-step form — fill email and click continue
       fillField(emailField, credentials.username);
       showToast('🔑 MetaKey: email filled, continuing...');
       state = 'email_filled';
-
       setTimeout(() => {
         const btn = findSubmitButton();
         if (btn) {
@@ -81,7 +105,6 @@
         }
       }, 400);
     } else if (!emailField && passwordField) {
-      // Already on password step
       fillField(passwordField, credentials.password);
       showToast('🔑 MetaKey: password filled');
       state = 'idle';
@@ -100,45 +123,26 @@
         state = 'idle';
         pendingCredentials = null;
       }
-      if (attempts > 20) { // 4 seconds timeout
-        clearInterval(interval);
-        state = 'idle';
-      }
+      if (attempts > 20) { clearInterval(interval); state = 'idle'; }
     }, 200);
   }
 
-  // Listen for fill command from background/popup
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'FILL_CREDENTIALS') {
-      fillCredentials(message.credentials);
-    }
-  });
-
-  // Auto-detect login form on page load
+  // Auto-detect login form
+  let notified = false;
   function checkForLoginForm() {
+    if (notified) return;
     const emailField = findEmailField();
     const passwordField = findPasswordField();
     if (emailField || passwordField) {
+      notified = true;
       console.log('[MetaKey] Login form detected on:', window.location.hostname);
       chrome.runtime.sendMessage({ type: 'AUTOFILL_READY' });
     }
   }
 
-  // Watch for dynamically injected forms (SPAs)
-  let notified = false;
-  const observer = new MutationObserver(() => {
-    if (!notified) {
-      const emailField = findEmailField();
-      const passwordField = findPasswordField();
-      if (emailField || passwordField) {
-        notified = true;
-        chrome.runtime.sendMessage({ type: 'AUTOFILL_READY' });
-      }
-    }
-  });
-
   setTimeout(() => {
     checkForLoginForm();
+    const observer = new MutationObserver(() => checkForLoginForm());
     observer.observe(document.body, { childList: true, subtree: true });
   }, 800);
 

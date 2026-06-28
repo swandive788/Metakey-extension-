@@ -61,6 +61,21 @@
     }
     .email-input:focus { border-color: #4a4aff; }
     .email-input::placeholder { color: #333366; }
+    .domain-select {
+      width: 100%;
+      background: #0d0d1a;
+      border: 1px solid #2a2a6e;
+      border-radius: 4px;
+      color: #e0e0ff;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 6px 8px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .domain-select:focus { border-color: #4a4aff; }
+    .domain-select option { background: #0d0d1a; color: #e0e0ff; }
     .save-btn {
       padding: 6px 10px;
       background: #1a1a5e;
@@ -110,6 +125,7 @@
       text-align: center;
       letter-spacing: 1px;
     }
+    .no-sites { font-size: 11px; color: #333366; font-style: italic; }
   </style>
 </head>
 <body>
@@ -133,6 +149,16 @@
   <div class="card">
     <div class="card-label">Current Site</div>
     <div class="domain-text" id="domainText">—</div>
+  </div>
+
+  <div class="card" id="savedSitesCard">
+    <div class="card-label">Saved Sites</div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <div id="savedSitesContainer" style="flex:1;"></div>
+      <button class="save-btn" id="removeBtn" style="display:none; background:#3a0a0a; border-color:#ff4466; color:#ff4466;">Remove</button>
+    </div>
+      <span class="no-sites">No saved sites yet</span>
+    </div>
   </div>
 
   <div class="card">

@@ -293,12 +293,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'AUTOFILL_READY') {
     const domain = new URL(sender.tab.url).hostname;
     const key = `email:${domain}`;
-    chrome.storage.local.get(key, (stored) => {
+
+    const doFill = async () => {
+      // Ensure wallet is connected before trying to derive
+      if (!activeWallet) {
+        await pingWallet(tabId);
+      }
+      if (!activeWallet) return; // still not connected, skip autofill
+
+      const stored = await new Promise(resolve => chrome.storage.local.get(key, resolve));
       const emailOverride = stored[key] || null;
-      deriveCredentials(domain, emailOverride, tabId).then(credentials => {
-        chrome.tabs.sendMessage(sender.tab.id, { type: 'FILL_CREDENTIALS', credentials });
-      });
-    });
+      const credentials = await deriveCredentials(domain, emailOverride, tabId);
+      if (credentials && credentials.success) {
+        chrome.tabs.sendMessage(sender.tab.id, { type: 'FILL_CREDENTIALS', credentials }, () => { chrome.runtime.lastError; });
+      }
+    };
+
+    doFill();
     return true;
   }
 });

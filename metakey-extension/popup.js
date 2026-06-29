@@ -49,10 +49,12 @@ async function getCurrentDomain() {
 // Sync emails from chain into local storage
 async function syncFromChain() {
   try {
+    const blocklist = await getBlocklist();
     const chainEmails = await chrome.runtime.sendMessage({ type: 'LOAD_EMAILS_CHAIN' });
     if (chainEmails && Object.keys(chainEmails).length > 0) {
       const toStore = {};
       for (const [domain, email] of Object.entries(chainEmails)) {
+        if (blocklist.includes(domain)) continue; // skip removed domains
         toStore[`email:${domain}`] = email;
       }
       await chrome.storage.local.set(toStore);
@@ -261,10 +263,28 @@ async function removeSite(domain) {
 
   // Note: chain records can't be deleted (immutable) but local removal
   // means it won't show in the dropdown or be used for autofill
-  console.log('[MetaKey] Removed locally:', domain);
+  // Add to blocklist so chain sync skips this domain
+  await addToBlocklist(domain);
+  console.log('[MetaKey] Removed and blocklisted:', domain);
 }
 
 removeBtn.addEventListener('click', () => {
   const select = document.querySelector('.domain-select');
   if (select?.value) removeSite(select.value);
 });
+
+// ── Blocklist helpers ────────────────────────────────────────────────────────
+// Domains in the blocklist are skipped during chain sync
+
+async function getBlocklist() {
+  const result = await chrome.storage.local.get('metakey_blocklist');
+  return result.metakey_blocklist || [];
+}
+
+async function addToBlocklist(domain) {
+  const list = await getBlocklist();
+  if (!list.includes(domain)) {
+    list.push(domain);
+    await chrome.storage.local.set({ metakey_blocklist: list });
+  }
+}
